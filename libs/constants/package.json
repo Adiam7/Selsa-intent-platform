@@ -1,0 +1,8 @@
+{
+  "name": "@intent/constants",
+  "version": "0.1.0",
+  "main": "dist/libs/constants/src/index.js",
+  "types": "src/index.ts",
+  "scripts": { "build": "tsc" },
+  "devDependencies": { "typescript": "^5.5.0" }
+}

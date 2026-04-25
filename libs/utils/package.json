@@ -1,0 +1,8 @@
+{
+  "name": "@intent/utils",
+  "version": "0.1.0",
+  "main": "dist/libs/utils/src/index.js",
+  "types": "src/index.ts",
+  "scripts": { "build": "tsc" },
+  "devDependencies": { "typescript": "^5.5.0", "@types/node": "^20.0.0" }
+}

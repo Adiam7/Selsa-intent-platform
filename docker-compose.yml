@@ -1,0 +1,330 @@
+version: "3.9"
+
+x-app-base: &app-base
+  image: node:20-alpine
+  working_dir: /workspace
+  volumes:
+    - ./:/workspace
+  networks: [intent-net]
+  environment:
+    NODE_ENV: ${NODE_ENV:-development}
+    DATABASE_URL: ${DATABASE_URL:-postgresql://intent:intent@postgres:5432/intent_platform}
+    REDIS_HOST: ${REDIS_HOST:-redis}
+    REDIS_PORT: ${REDIS_PORT:-6379}
+    KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
+    CLICKHOUSE_URL: ${CLICKHOUSE_URL:-http://clickhouse:8123}
+    CLICKHOUSE_DB: ${CLICKHOUSE_DB:-intent_analytics}
+    CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+    CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
+    JWT_SECRET: ${JWT_SECRET:-change-me-in-production-use-a-long-random-string}
+    JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+    ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+    EVENT_RETENTION_DAYS: ${EVENT_RETENTION_DAYS:-90}
+    NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+    API_GATEWAY_URL: ${API_GATEWAY_URL:-http://api-gateway:3001}
+
+# ─── Networks ────────────────────────────────────────────────────────────────
+networks:
+  intent-net:
+    driver: bridge
+
+# ─── Volumes ─────────────────────────────────────────────────────────────────
+volumes:
+  postgres-data:
+  redis-data:
+  kafka-data:
+  clickhouse-data:
+  zookeeper-data:
+
+# ─── Services ─────────────────────────────────────────────────────────────────
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: intent
+      POSTGRES_PASSWORD: intent
+      POSTGRES_DB: intent_platform
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./db/migrations/001_initial_schema.sql:/docker-entrypoint-initdb.d/001_init.sql
+    networks: [intent-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U intent -d intent_platform"]
+      interval: 5s
+      retries: 10
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save 60 1 --loglevel warning
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks: [intent-net]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  # ── Zookeeper (required by Kafka) ────────────────────────────────────────────
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper
+    networks: [intent-net]
+
+  # ── Kafka ────────────────────────────────────────────────────────────────────
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    depends_on: [zookeeper]
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks: [intent-net]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "kafka-broker-api-versions",
+          "--bootstrap-server",
+          "localhost:9092",
+        ]
+      interval: 10s
+      retries: 10
+
+  # ── Kafka Topic Init ──────────────────────────────────────────────────────────
+  kafka-init:
+    image: confluentinc/cp-kafka:7.6.0
+    depends_on:
+      kafka:
+        condition: service_healthy
+    command: >
+      bash -c "
+        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic raw-events        --partitions 6 --replication-factor 1 &&
+        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic processed-events  --partitions 6 --replication-factor 1 &&
+        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic intent-updates    --partitions 3 --replication-factor 1 &&
+        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic segment-updates   --partitions 3 --replication-factor 1 &&
+        kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic session-events    --partitions 3 --replication-factor 1
+        echo 'Topics created.'
+      "
+    networks: [intent-net]
+
+  # ── ClickHouse ───────────────────────────────────────────────────────────────
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.4
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      - ./db/clickhouse-init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks: [intent-net]
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+  # ── Kafka UI (dev convenience) ────────────────────────────────────────────────
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    depends_on: [kafka]
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    networks: [intent-net]
+    profiles: [dev]
+
+  # ── App Runtime: default pipeline path (collector endpoint) ─────────────────
+  event-collector:
+    build:
+      context: .
+      dockerfile: infra/docker/event-collector.Dockerfile
+    depends_on:
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${EVENT_COLLECTOR_PORT:-3002}
+      KAFKA_CLIENT_ID: ${EVENT_COLLECTOR_KAFKA_CLIENT_ID:-event-collector}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+    ports:
+      - "3002:3002"
+    networks: [intent-net]
+
+  # ── Optional app services (start with --profile apps) ───────────────────────
+  api-gateway:
+    build:
+      context: .
+      dockerfile: infra/docker/api-gateway.Dockerfile
+    depends_on:
+      event-collector:
+        condition: service_started
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${API_GATEWAY_PORT:-3001}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+    ports:
+      - "3001:3001"
+    networks: [intent-net]
+    profiles: [apps]
+
+  stream-processor:
+    <<: *app-base
+    depends_on:
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${STREAM_PROCESSOR_PORT:-3004}
+      KAFKA_CLIENT_ID: ${STREAM_PROCESSOR_KAFKA_CLIENT_ID:-stream-processor}
+      KAFKA_GROUP_ID: ${STREAM_PROCESSOR_KAFKA_GROUP_ID:-stream-processor-group}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
+    command: sh -lc "corepack enable && pnpm install && pnpm --filter @intent/stream-processor serve"
+    ports:
+      - "3004:3004"
+    profiles: [apps]
+
+  intent-engine:
+    <<: *app-base
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${INTENT_ENGINE_PORT:-3003}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://intent:intent@postgres:5432/intent_platform}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+    command: sh -lc "corepack enable && pnpm install && pnpm --filter @intent/intent-engine serve"
+    ports:
+      - "3003:3003"
+    profiles: [apps]
+
+  worker-jobs:
+    <<: *app-base
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${WORKER_JOBS_PORT:-3005}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://intent:intent@postgres:5432/intent_platform}
+      EVENT_RETENTION_DAYS: ${EVENT_RETENTION_DAYS:-90}
+    command: sh -lc "corepack enable && pnpm install && pnpm --filter @intent/worker-jobs serve"
+    ports:
+      - "3005:3005"
+    profiles: [apps]
+
+  auth-service:
+    <<: *app-base
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${AUTH_SERVICE_PORT:-3010}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://intent:intent@postgres:5432/intent_platform}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-use-a-long-random-string}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+    command: sh -lc "corepack enable && pnpm install && pnpm --filter @intent/auth-service serve"
+    ports:
+      - "3010:3010"
+    profiles: [apps]
+
+  user-service:
+    <<: *app-base
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${USER_SERVICE_PORT:-3011}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://intent:intent@postgres:5432/intent_platform}
+    command: sh -lc "corepack enable && pnpm install && pnpm --filter @intent/user-service serve"
+    ports:
+      - "3011:3011"
+    profiles: [apps]
+
+  segmentation-service:
+    <<: *app-base
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${SEGMENTATION_SERVICE_PORT:-3012}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://intent:intent@postgres:5432/intent_platform}
+    command: sh -lc "corepack enable && pnpm install && pnpm --filter @intent/segmentation-service serve"
+    ports:
+      - "3012:3012"
+    profiles: [apps]
+
+  analytics-service:
+    <<: *app-base
+    depends_on:
+      clickhouse:
+        condition: service_started
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${ANALYTICS_SERVICE_PORT:-3013}
+      CLICKHOUSE_URL: ${CLICKHOUSE_URL:-http://clickhouse:8123}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-intent_analytics}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
+    command: sh -lc "corepack enable && pnpm install && pnpm --filter @intent/analytics-service serve"
+    ports:
+      - "3013:3013"
+    profiles: [apps]
+
+  recommendation-service:
+    <<: *app-base
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${RECOMMENDATION_SERVICE_PORT:-3014}
+    command: sh -lc "corepack enable && pnpm install && pnpm --filter @intent/recommendation-service serve"
+    ports:
+      - "3014:3014"
+    profiles: [apps]
+
+  dashboard:
+    <<: *app-base
+    depends_on:
+      api-gateway:
+        condition: service_started
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+      API_GATEWAY_URL: ${API_GATEWAY_URL:-http://api-gateway:3001}
+    command: sh -lc "corepack enable && pnpm install && pnpm --filter @intent/dashboard dev"
+    ports:
+      - "3000:3000"
+    profiles: [apps]

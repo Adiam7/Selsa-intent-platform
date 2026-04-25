@@ -1,0 +1,9 @@
+{
+  "name": "@intent/event-schemas",
+  "version": "0.1.0",
+  "main": "dist/libs/event-schemas/src/index.js",
+  "types": "src/index.ts",
+  "scripts": { "build": "tsc" },
+  "dependencies": { "zod": "^3.23.0" },
+  "devDependencies": { "typescript": "^5.5.0" }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "@intent/common-types",
+  "version": "0.1.0",
+  "main": "dist/libs/common-types/src/index.js",
+  "types": "src/index.ts",
+  "scripts": { "build": "tsc" },
+  "devDependencies": { "typescript": "^5.5.0" }
+}

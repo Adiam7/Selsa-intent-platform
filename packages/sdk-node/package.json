@@ -1,0 +1,19 @@
+{
+  "name": "@intent/sdk-node",
+  "version": "0.1.0",
+  "description": "Node.js server-side tracking SDK for the Intent Platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "test": "jest"
+  },
+  "dependencies": {
+    "undici": "^6.19.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^20.0.0"
+  }
+}

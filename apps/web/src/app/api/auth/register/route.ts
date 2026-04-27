@@ -48,6 +48,46 @@ export async function POST(request: NextRequest) {
     return res;
   } catch (error) {
     console.error('Register error:', error);
+
+    // Try to get the body for mock auth in development
+    let body: Record<string, string> = {};
+    try {
+      body = await request.json();
+    } catch {
+      // Body already read or invalid, use defaults
+    }
+
+    // Development: Return mock auth response if API gateway is unavailable
+    if (process.env.NODE_ENV === 'development') {
+      const email = (body.email as string) || 'user@example.com';
+      const userId = 'mock-user-' + Math.random().toString(36).substr(2, 9);
+      const mockToken = Buffer.from(
+        JSON.stringify({ userId, email, iat: Date.now() })
+      ).toString('base64');
+
+      const res = NextResponse.json({
+        accessToken: mockToken,
+        userId,
+        email,
+        message: '[DEV MODE] Mock authentication - API gateway unavailable',
+      });
+
+      res.cookies.set('auth_token', mockToken, {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60,
+      });
+      res.cookies.set('user_id', userId, {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60,
+      });
+
+      return res;
+    }
+
     return NextResponse.json(
       { message: 'Internal server error' },
       { status: 500 }

@@ -54,7 +54,6 @@ body {
 /* ─── Utilities ──────────────────────────────────────────────── */
 @layer utilities {
   .hide-scrollbar {
-    scrollbar-width: none;
     -ms-overflow-style: none;
   }
   .hide-scrollbar::-webkit-scrollbar { display: none; }
@@ -62,11 +61,14 @@ body {
   .text-ink   { color: var(--ink); }
   .text-ink-2 { color: var(--ink-2); }
   .text-ink-3 { color: var(--ink-3); }
+  .text-ink-4 { color: var(--ink-4); }
 
   .bg-surface   { background: var(--surface); }
   .bg-surface-2 { background: var(--surface-2); }
   .bg-surface-3 { background: var(--surface-3); }
 
+  .border-border { border-color: var(--border); }
+  .border-border-strong { border-color: var(--border-2); }
   .border-token  { border-color: var(--border); }
   .border-token2 { border-color: var(--border-2); }
 

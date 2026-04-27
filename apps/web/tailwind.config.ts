@@ -28,6 +28,12 @@ const config: Config = {
           DEFAULT: '#e6e3f0',
           strong:  '#ccc9db',
         },
+        intent: {
+          indigo: '#4F46E5',
+          pink: '#F43F5E',
+          violet: '#8B5CF6',
+          pearl: '#F8FAFC',
+        },
       },
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
@@ -48,6 +54,7 @@ const config: Config = {
       backgroundImage: {
         'gradient-hero':   'linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)',
         'gradient-subtle': 'linear-gradient(135deg, #f3efff 0%, #fce7f3 100%)',
+        'brand-gradient': 'linear-gradient(to right, #4F46E5, #8B5CF6, #F43F5E)',
       },
       keyframes: {
         fadeUp: {

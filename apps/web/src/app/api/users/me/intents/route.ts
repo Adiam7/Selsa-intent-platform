@@ -29,6 +29,17 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json(data);
   } catch (error) {
     console.error('Update intents error:', error);
+
+    // Development: Return mock updated intents if API gateway is unavailable
+    if (process.env.NODE_ENV === 'development') {
+      const body = await request.json().catch(() => ({}));
+
+      return NextResponse.json({
+        intents: body.intents || ['Build something', 'Learn a skill'],
+        message: '[DEV MODE] Mock intents updated - API gateway unavailable',
+      });
+    }
+
     return NextResponse.json(
       { message: 'Internal server error' },
       { status: 500 },

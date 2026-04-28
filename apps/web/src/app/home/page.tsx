@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { IntentPillSwitcher } from '@/components/IntentPillSwitcher';
 import { FeedLayout } from '@/components/FeedLayout';
+import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
 
 const FEED_CONFIG = {
   build_something: {
@@ -211,16 +213,22 @@ export default function HomePage() {
   );
 
   return (
-    <FeedLayout
-      feedName={feedConfig.name}
-      tagline={feedConfig.tagline}
-      categories={feedConfig.categories}
-      activeCategory={currentCategory}
-      onCategoryChange={(cat) => setActiveCategory(cat)}
-      searchPlaceholder={feedConfig.searchPlaceholder}
-      cards={mappedCards}
-      intentSwitcher={intentSwitcher}
-      loading={loading}
-    />
+    <div className="min-h-screen bg-gradient-to-r from-blue-50 via-pink-50 to-purple-50 flex flex-col">
+      <Header />
+      <div className="flex-1">
+        <FeedLayout
+          feedName={feedConfig.name}
+          tagline={feedConfig.tagline}
+          categories={feedConfig.categories}
+          activeCategory={currentCategory}
+          onCategoryChange={(cat) => setActiveCategory(cat)}
+          searchPlaceholder={feedConfig.searchPlaceholder}
+          cards={mappedCards}
+          intentSwitcher={intentSwitcher}
+          loading={loading}
+        />
+      </div>
+      <Footer />
+    </div>
   );
 }

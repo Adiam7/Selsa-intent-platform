@@ -2,8 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Check, Zap } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowLeft, Check } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
 import {
   Lightbulb, GraduationCap, BookOpen, HandHeart, HelpCircle, Heart,
   Handshake, Briefcase, ShoppingBag, ShoppingCart, Rocket,
@@ -101,47 +104,52 @@ export default function CreateListingPage() {
   /* ── Step 1: Intent selection ─────────────────────────────── */
   if (step === 'intent') {
     return (
-      <div className="min-h-screen bg-surface-2">
-        {/* Top bar */}
-        <div className="bg-surface/90 backdrop-blur-md border-b border-border sticky top-0 z-10">
-          <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
-            <button
-              onClick={() => router.push('/home')}
-              className="p-2 -ml-2 rounded-lg text-ink-3 hover:text-ink hover:bg-surface-3 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <p className="font-bold text-ink text-sm">Create a listing</p>
-              <p className="text-[11px] text-ink-4">Step 1 of 2 · Choose what you want to post</p>
+      <div className="min-h-screen bg-gradient-to-r from-blue-50 via-pink-50 to-purple-50 flex flex-col">
+        <Header />
+
+        {/* Main content */}
+        <div className="flex-1">
+          <div className="max-w-2xl mx-auto px-4 pt-6 pb-10">
+            {/* Create listing header */}
+            <div className="mb-8 flex items-center gap-3">
+              <button
+                onClick={() => router.push('/home')}
+                className="p-2 -ml-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-white/20 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div>
+                <p className="font-bold text-gray-900 text-sm">Create a listing</p>
+                <p className="text-[11px] text-gray-600">Step 1 of 2 · Choose what you want to post</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {CREATE_INTENT_ORDER.map((intent) => {
+                const meta = INTENT_META[intent];
+                if (!meta) return null;
+                const Icon = meta.icon;
+                return (
+                  <button
+                    key={intent}
+                    onClick={() => handleIntentSelect(intent)}
+                    className="group flex items-center gap-3.5 p-4 bg-white/70 border border-white/80 rounded-xl text-left hover:border-purple-300/60 hover:bg-white/90 hover:shadow-lg transition-all duration-150 active:scale-[0.98]"
+                  >
+                    <div className={cn('w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0', meta.bg)}>
+                      <Icon className={cn('w-5 h-5', meta.color)} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm text-gray-900">{meta.label}</p>
+                      <p className="text-xs text-gray-600 truncate">{meta.desc}</p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
 
-        <div className="max-w-2xl mx-auto px-4 pt-6 pb-10">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {CREATE_INTENT_ORDER.map((intent) => {
-              const meta = INTENT_META[intent];
-              if (!meta) return null;
-              const Icon = meta.icon;
-              return (
-                <button
-                  key={intent}
-                  onClick={() => handleIntentSelect(intent)}
-                  className="group flex items-center gap-3.5 p-4 bg-surface border border-border rounded-xl text-left hover:border-primary/40 hover:bg-primary-soft hover:shadow-card transition-all duration-150 active:scale-[0.98]"
-                >
-                  <div className={cn('w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0', meta.bg)}>
-                    <Icon className={cn('w-5 h-5', meta.color)} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-sm text-ink">{meta.label}</p>
-                    <p className="text-xs text-ink-4 truncate">{meta.desc}</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <Footer />
       </div>
     );
   }
@@ -151,104 +159,99 @@ export default function CreateListingPage() {
   const fields = INTENT_FORM_FIELDS[selectedIntent] || INTENT_FORM_FIELDS.default;
 
   return (
-    <div className="min-h-screen bg-surface-2">
-      {/* Top bar */}
-      <div className="bg-surface/90 backdrop-blur-md border-b border-border sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
-          <button
-            onClick={() => setStep('intent')}
-            className="p-2 -ml-2 rounded-lg text-ink-3 hover:text-ink hover:bg-surface-3 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            {intentMeta && (
-              <div className={cn('w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0', intentMeta.bg)}>
-                <intentMeta.icon className={cn('w-3.5 h-3.5', intentMeta.color)} />
-              </div>
-            )}
-            <div className="min-w-0">
-              <p className="font-bold text-ink text-sm truncate">
-                {intentMeta?.label ?? selectedIntent.replace(/_/g, ' ')}
-              </p>
-              <p className="text-[11px] text-ink-4">Step 2 of 2 · Fill in the details</p>
-            </div>
-          </div>
-          {/* Step indicator */}
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <div className="w-2 h-2 rounded-full bg-border-strong" />
-            <div className="w-2 h-2 rounded-full bg-primary" />
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-r from-blue-50 via-pink-50 to-purple-50 flex flex-col">
+      <Header />
 
-      <div className="max-w-2xl mx-auto px-4 pt-6 pb-24">
-        {error && (
-          <p className="text-sm text-red-500 bg-red-50 px-3 py-2.5 rounded-md border border-red-100 mb-5">
-            {error}
-          </p>
-        )}
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          {fields.map((field) => (
-            <div key={field.name} className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-ink-2">
-                {field.label}
-                {field.required && <span className="text-red-400 ml-0.5">*</span>}
-              </label>
-
-              {field.type === 'textarea' ? (
-                <textarea
-                  name={field.name}
-                  value={formData[field.name] || ''}
-                  onChange={handleInputChange}
-                  required={field.required}
-                  placeholder={field.placeholder}
-                  rows={4}
-                  className="w-full px-3.5 py-2.5 bg-surface-2 border border-border rounded-md text-sm text-ink placeholder:text-ink-4 focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-150 resize-none"
-                />
-              ) : (
-                <input
-                  type={field.type}
-                  name={field.name}
-                  value={formData[field.name] || ''}
-                  onChange={handleInputChange}
-                  required={field.required}
-                  placeholder={field.placeholder}
-                  className="w-full px-3.5 py-2.5 bg-surface-2 border border-border rounded-md text-sm text-ink placeholder:text-ink-4 focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-150"
-                />
-              )}
-            </div>
-          ))}
-
-          <div className="pt-2">
+      {/* Main content */}
+      <div className="flex-1">
+        <div className="max-w-2xl mx-auto px-4 pt-6 pb-10">
+          {/* Create listing header */}
+          <div className="mb-8 flex items-center gap-3">
             <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-primary text-white py-3 rounded-md font-semibold text-sm hover:bg-primary-dark active:scale-[0.99] disabled:opacity-60 transition-all duration-150 shadow-card"
+              onClick={() => setStep('intent')}
+              className="p-2 -ml-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-white/20 transition-colors"
             >
-              {loading ? (
-                'Posting…'
-              ) : (
-                <>
-                  <Check className="w-4 h-4" />
-                  Post listing
-                </>
-              )}
+              <ArrowLeft className="w-5 h-5" />
             </button>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              {intentMeta && (
+                <div className={cn('w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0', intentMeta.bg)}>
+                  <intentMeta.icon className={cn('w-3.5 h-3.5', intentMeta.color)} />
+                </div>
+              )}
+              <div className="min-w-0">
+                <p className="font-bold text-gray-900 text-sm truncate">
+                  {intentMeta?.label ?? selectedIntent.replace(/_/g, ' ')}
+                </p>
+                <p className="text-[11px] text-gray-600">Step 2 of 2 · Fill in the details</p>
+              </div>
+            </div>
+            {/* Step indicator */}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <div className="w-2 h-2 rounded-full bg-gray-300" />
+              <div className="w-2 h-2 rounded-full bg-purple-600" />
+            </div>
           </div>
-        </form>
-      </div>
 
-      {/* Bottom logo bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-surface/95 backdrop-blur-md border-t border-border px-4 py-3">
-        <div className="max-w-2xl mx-auto flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
-            <Zap className="w-3 h-3 text-white fill-white" />
-          </div>
-          <span className="text-xs text-ink-4">Your listing will be visible on the matching feed</span>
+          {error && (
+            <p className="text-sm text-red-500 bg-red-50 px-3 py-2.5 rounded-md border border-red-100 mb-5">
+              {error}
+            </p>
+          )}
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5 pb-10">
+            {fields.map((field) => (
+              <div key={field.name} className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-gray-700">
+                  {field.label}
+                  {field.required && <span className="text-red-400 ml-0.5">*</span>}
+                </label>
+
+                {field.type === 'textarea' ? (
+                  <textarea
+                    name={field.name}
+                    value={formData[field.name] || ''}
+                    onChange={handleInputChange}
+                    required={field.required}
+                    placeholder={field.placeholder}
+                    rows={4}
+                    className="w-full px-3.5 py-2.5 bg-white/70 border border-white/80 rounded-md text-sm text-gray-900 placeholder:text-gray-500 focus:bg-white focus:border-purple-300 focus:ring-2 focus:ring-purple-200 transition-all duration-150 resize-none"
+                  />
+                ) : (
+                  <input
+                    type={field.type}
+                    name={field.name}
+                    value={formData[field.name] || ''}
+                    onChange={handleInputChange}
+                    required={field.required}
+                    placeholder={field.placeholder}
+                    className="w-full px-3.5 py-2.5 bg-white/70 border border-white/80 rounded-md text-sm text-gray-900 placeholder:text-gray-500 focus:bg-white focus:border-purple-300 focus:ring-2 focus:ring-purple-200 transition-all duration-150"
+                  />
+                )}
+              </div>
+            ))}
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-md font-semibold text-sm hover:shadow-lg active:scale-[0.99] disabled:opacity-60 transition-all duration-150 shadow-lg"
+              >
+                {loading ? (
+                  'Posting…'
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Post listing
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
+
+      <Footer />
     </div>
   );
 }

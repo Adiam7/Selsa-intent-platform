@@ -21,7 +21,7 @@ export default function SplashPage() {
               <span className="font-bold text-lg text-gray-900">IntentHub</span>
             </div>
             <div className="hidden lg:flex items-center gap-8">
-                <Link href="#" className="text-sm font-medium text-gray-700 hover:text-gray-900">Product</Link>
+                <Link href="#" className="text-sm font-medium text-gray-700 hover:text-gray-900">Posts</Link>
                 <Link href="#" className="text-sm font-medium text-gray-700 hover:text-gray-900">Solutions</Link>
                 <Link href="#" className="text-sm font-medium text-gray-700 hover:text-gray-900">Resources</Link>
                 <Link href="#" className="text-sm font-medium text-gray-700 hover:text-gray-900">Pricing</Link>
@@ -35,7 +35,7 @@ export default function SplashPage() {
           </div>
         </nav>
 
-        <main className="relative flex items-center justify-center px-6 overflow-hidden pt-8 pb-2">
+        <main className="relative flex items-center justify-center px-6 overflow-hidden pt-8 pb-4">
           <div className="relative max-w-7xl w-full grid grid-cols-1 md:grid-cols-2 gap-10 items-center md:justify-center">
             <div className="relative flex items-center justify-center  h-96 w-96 mx-auto bg-gradient-to-b from-blue-100/50 to-transparent rounded-full">
               <div className="absolute w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 shadow-[0_20px_60px_rgba(59,130,246,0.5)] flex items-center justify-center text-white z-20">
@@ -71,7 +71,7 @@ export default function SplashPage() {
             </div>
             <div className="flex justify-center md:justify-center">
               <div className="w-full max-w-md p-10 rounded-3xl bg-white/[0.17] backdrop-blur-2xl border border-white/60 shadow-[0_30px_60px_rgba(0,0,0,0.12)]">
-                <div className="inline-block mb-4 px-3 py-1 text-xs rounded-full bg-purple-100/60 text-purple-600 font-semibold backdrop-blur-sm"> Welcome to Intent Platform</div>
+                {/* <div className="inline-block mb-4 px-3 py-1 text-xs rounded-full bg-purple-100/60 text-purple-600 font-semibold backdrop-blur-sm"> Welcome to Intent Platform</div> */}
                 <h1 className="text-4xl md:text-5xl font-bold leading-tight text-slate-900">Where every<br />intent<br /><span className="bg-gradient-to-r from-purple-600 via-pink-500 to-blue-500 bg-clip-text text-transparent">finds the right people</span></h1>
                 <p className="mt-4 text-slate-600 text-base leading-relaxed">Connect intent signals with the right users, products, and actions—instantly.</p>
                 <div className="mt-8 flex items-center gap-4">
@@ -93,7 +93,7 @@ export default function SplashPage() {
           <style jsx>{`@keyframes float {0% { transform: translateY(0px); }50% { transform: translateY(-10px); }100% { transform: translateY(0px); }}.animate-float { animation: float 5s ease-in-out infinite; }`}</style>
         </main>
 
-        <section className="max-w-7xl mx-auto px-6 pt-2 pb-8">
+        <section className="max-w-7xl mx-auto px-6 pt-4 pb-8">
           <div className="p-6 rounded-3xl bg-white/[0.17] backdrop-blur-xl border border-white/80 shadow-[0_8px_32px_rgba(255,255,255,0.1)]">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="flex items-start gap-3 lg:border-r lg:border-white/30 lg:pr-6">
